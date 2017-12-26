@@ -1,30 +1,40 @@
 require 'Nokogiri'
 require 'HTTParty'
-require 'mechanize'
+require_relative 'input'
+require_relative 'page'
 
-def search_link(page, visited_pages)
-  index = 0
-  link = nil
-
-  while !link && !visited_pages.include?(page.title)
-    link = page.search('//div[@class="mw-parser-output"]/p/a')[index].attributes["href"].value
-    index += 1
+class Wikipedia
+  def initialize
+    @visited_pages = []
+    @current_page = Page.new(Input.get_page_title, @visited_pages);
+    start
   end
-  link
+
+  def start
+    while @current_page.title != "Philosophy - Wikipedia" do
+      mark_page_visited
+      @current_page = Page.new(@current_page.search_link, @visited_pages)
+    end
+    show_completion_message
+  end
+
+  def mark_page_visited
+    show_page_title
+    add_to_visited
+  end
+
+  def add_to_visited
+    @visited_pages.push(@current_page.uri)
+  end
+
+  def show_page_title
+    puts @current_page.title
+  end
+
+  def show_completion_message
+    show_page_title
+    puts 'Done!'
+  end
 end
 
-puts "Please enter the title of your page:"
-page_title = gets
-puts page_title
-mechanize = Mechanize.new
-page = mechanize.get("http://wikipedia.org/wiki/#{page_title}")
-visited_pages = []
-
-while true do
-  puts page.title
-  first_link = search_link(page, visited_pages)
-  next_page = "http://www.wikipedia.org/#{first_link}"
-  visited_pages.push(page.title)
-  page = mechanize.get(next_page)
-end
-
+wikipedia_search = Wikipedia.new
